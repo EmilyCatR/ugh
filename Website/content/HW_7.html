@@ -1,0 +1,396 @@
+---
+title: "HW 7"
+author: "SDS348 Fall 2020"
+date: "November 11, 2020"
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+---
+
+<link href="/rmarkdown-libs/anchor-sections/anchor-sections.css" rel="stylesheet" />
+<script src="/rmarkdown-libs/anchor-sections/anchor-sections.js"></script>
+
+
+<div id="emily-reed-ecr882" class="section level2">
+<h2>Emily Reed, ecr882</h2>
+<p><strong>This homework is due Sunday Nov 1, 2020 at 11:59pm. Please submit as a pdf file on Canvas.</strong></p>
+<p><em>For all questions, include the R commands/functions that you used to find your answer. Answers without supporting code will not receive credit.</em></p>
+<blockquote>
+<p><strong>Review of how to submit this assignment</strong> All homework assignments will be completed using R Markdown. These <code>.Rmd</code> files consist of text/syntax (formatted using Markdown) alongside embedded R code. When you have completed the assignment (by adding R code inside codeblocks and supporting text outside of the codeblocks), create your document as follows:</p>
+</blockquote>
+<blockquote>
+<ul>
+<li>Click the arrow next to the &quot;Knit&quot; button (above)</li>
+<li>Choose &quot;Knit to HTML&quot; and wait; fix any errors if applicable</li>
+<li>Go to Files pane and put checkmark next to the correct HTML file</li>
+<li>Click on the blue gear icon (&quot;More&quot;) and click Export</li>
+<li>Download the file and then upload to Canvas</li>
+</ul>
+</blockquote>
+<hr />
+</div>
+<div id="question-1.1-3-pts" class="section level2">
+<h2>Question 1.1 (3 pts)</h2>
+<ul>
+<li>Run the following code to generate some play data (variables x and y). Then, regress y on x with <code>lm(y~x)</code> and call summary() on the fitted model. Make a scatterplot (either base R or ggplot) to eyeball whether homoskedasticity is met (i.e., do the points fan out as you go up the x-axis?). Then run the Breuch-Pagan test <code>bptest()</code> to formally test this null hypothesis. If you reject the null hypothesis of homoskedasticity, redo the regression using heteroskedasticity robust standard errors. How does this change your t-statistics and p-values?</li>
+</ul>
+<p>You will need the <code>lmtest</code> package and the <code>sandwich</code> package in order to do things like <code>bptest(fit)</code> and <code>coeftest(fit,vcov=vcovHC(fit))</code>; install them if you haven't.</p>
+<pre class="r"><code>library(lmtest)
+library(sandwich)
+
+set.seed(348)
+x &lt;- runif(55, 0, 1)
+y &lt;- 0.1 * rnorm(55, x, x)
+
+model1 &lt;- lm(y ~ x)
+summary(model1)</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = y ~ x)
+## 
+## Residuals:
+##       Min        1Q    Median        3Q       Max 
+## -0.093907 -0.022208 -0.004808  0.024363  0.201202 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)  
+## (Intercept) 0.009742   0.013112   0.743   0.4608  
+## x           0.048460   0.023442   2.067   0.0436 *
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 0.04878 on 53 degrees of freedom
+## Multiple R-squared:  0.07461,    Adjusted R-squared:  0.05715 
+## F-statistic: 4.273 on 1 and 53 DF,  p-value: 0.04361</code></pre>
+<pre class="r"><code>model1 %&gt;% ggplot(aes(x, y)) + geom_point()  #looks like it fans out</code></pre>
+<p><img src="/HW_7_files/figure-html/unnamed-chunk-1-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>bptest(model1)  #reject the null hypothesis</code></pre>
+<pre><code>## 
+##  studentized Breusch-Pagan test
+## 
+## data:  model1
+## BP = 6.118, df = 1, p-value = 0.01338</code></pre>
+<pre class="r"><code>coeftest(model1, vcov = vcovHC(model1))  #correct Ses robust to violations of homoskedasticity</code></pre>
+<pre><code>## 
+## t test of coefficients:
+## 
+##              Estimate Std. Error t value Pr(&gt;|t|)  
+## (Intercept) 0.0097416  0.0099737  0.9767  0.33314  
+## x           0.0484604  0.0282551  1.7151  0.09217 .
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<p>This model does not meet assumption of homoskedasticity (p value&lt;.05, reject null hypothesis that homoskedasicity is met), so robust standard errors were calculated. Before correcting for robust standard errors the x value had a significant effect on y values (t=2.067, p&lt;.05). After calculating robust errors, however, x was no longer significant in predicting y (t=1.71, p&gt;.05)</p>
+</div>
+<div id="question-1.2-3-pts" class="section level2">
+<h2>Question 1.2 (3 pts)</h2>
+<ul>
+<li>Run the following code to generate more play data (new variables x and y). Then, regress y on x with <code>lm(y~x) and call summary. Make a scatterplot (either base R or ggplot) to eyeball whether homoskedasticity is met. Then, use the Breuch-Pagan test</code>bptest()` to formally test this null hypothesis. Regardless of the result, redo the regression using heteroskedasticity robust standard errors. How does this change your t-statistics and p-values? How does this change differ from before (both in direction and magnitude)?</li>
+</ul>
+<pre class="r"><code>set.seed(348)
+x &lt;- runif(55, 0, 1)
+y &lt;- 0.1 * rnorm(55, x, 0.6)
+
+model2 &lt;- lm(y ~ x)
+summary(model2)</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = y ~ x)
+## 
+## Residuals:
+##       Min        1Q    Median        3Q       Max 
+## -0.118236 -0.028612 -0.006171  0.038243  0.134009 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)  
+## (Intercept) 0.005426   0.014775   0.367   0.7149  
+## x           0.062463   0.026416   2.365   0.0217 *
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 0.05496 on 53 degrees of freedom
+## Multiple R-squared:  0.09543,    Adjusted R-squared:  0.07836 
+## F-statistic: 5.591 on 1 and 53 DF,  p-value: 0.02174</code></pre>
+<pre class="r"><code>model2 %&gt;% ggplot(aes(x, y)) + geom_point()  #looks pretty gucci</code></pre>
+<p><img src="/HW_7_files/figure-html/unnamed-chunk-2-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>bptest(model2)  #not significant, can&#39;t reject null hypothesis, homoskedastic</code></pre>
+<pre><code>## 
+##  studentized Breusch-Pagan test
+## 
+## data:  model2
+## BP = 0.19935, df = 1, p-value = 0.6552</code></pre>
+<pre class="r"><code>coeftest(model2, vcov = vcovHC(model2))</code></pre>
+<pre><code>## 
+## t test of coefficients:
+## 
+##              Estimate Std. Error t value Pr(&gt;|t|)  
+## (Intercept) 0.0054256  0.0149121  0.3638   0.7174  
+## x           0.0624628  0.0254661  2.4528   0.0175 *
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<p>Homoskedastic assumption was met in this model (p value&gt;.05, failed to reject that homoskedasicity was normal), as seen in the scatterplot as bptest. In both regressions, x is a significant predictor of y (p&lt;.05, reject the null hypothesis). However, it is noted that the t statistic for the regression using non-robust errors is slightly lower than the t stat for the robust errors regression (t1=2.365 compared to t2=2.452), resulting in a larger p value. For every 1 unit increase in X for non-robust errors linear regression, y is predicted to increase .062463 units, .0000002 more than the regression using robust errors.</p>
+</div>
+<div id="question-1.3-3-pts" class="section level2">
+<h2>Question 1.3 (3 pts)</h2>
+<p>Using <code>x</code> and <code>y</code> from 1.2, calculate the bootstrap standard error of the slope by resampling observations (i.e., rows) from your dataframe with replacement. Also, calculate the boostrap standard error of the slope by resampling residuals (from the model fit in 1.2, with replacement), adding them to the fitted values to get the new &quot;data&quot;, re-computing the regression coefficient, saving, and repeating. For each, use 5000 iterations. How do your results compare with the standard errors from question 1.2? Would you still reject the null hypothesis using these standard errors?</p>
+<pre class="r"><code>set.seed(348)
+df &lt;- data.frame(x, y)
+
+# resampling rows:
+boot_dat &lt;- sample_frac(df, replace = T)
+
+
+samp_distn &lt;- replicate(5000, {
+    boot_dat &lt;- sample_frac(df, replace = T)
+    fit &lt;- lm(y ~ x, data = boot_dat)
+    coef(fit)
+})
+
+
+# resampling residuals
+fit &lt;- lm(y ~ x, data = df)
+resids &lt;- fit$residuals
+fitted &lt;- fit$fitted.values
+
+resid_resamp &lt;- replicate(5000, {
+    new_resids &lt;- sample(resids, replace = TRUE)
+    df$new_y &lt;- fitted + new_resids
+    fit &lt;- lm(new_y ~ x, data = df)
+    coef(fit)
+})
+
+summary(model2)  #from Q1.2</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = y ~ x)
+## 
+## Residuals:
+##       Min        1Q    Median        3Q       Max 
+## -0.118236 -0.028612 -0.006171  0.038243  0.134009 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)  
+## (Intercept) 0.005426   0.014775   0.367   0.7149  
+## x           0.062463   0.026416   2.365   0.0217 *
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 0.05496 on 53 degrees of freedom
+## Multiple R-squared:  0.09543,    Adjusted R-squared:  0.07836 
+## F-statistic: 5.591 on 1 and 53 DF,  p-value: 0.02174</code></pre>
+<pre class="r"><code>coeftest(model2, vcov = vcovHC(model2))  #from Q1.2</code></pre>
+<pre><code>## 
+## t test of coefficients:
+## 
+##              Estimate Std. Error t value Pr(&gt;|t|)  
+## (Intercept) 0.0054256  0.0149121  0.3638   0.7174  
+## x           0.0624628  0.0254661  2.4528   0.0175 *
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<pre class="r"><code>samp_distn %&gt;% t %&gt;% as.data.frame %&gt;% summarize_all(sd)</code></pre>
+<pre><code>##   (Intercept)          x
+## 1  0.01467149 0.02484746</code></pre>
+<pre class="r"><code>resid_resamp %&gt;% t %&gt;% as.data.frame %&gt;% summarize_all(sd)</code></pre>
+<pre><code>##   (Intercept)          x
+## 1  0.01460307 0.02612824</code></pre>
+<p>Comparing the st errors from all three tests, the first model (using robut errors) prodcues a std. error for x of .0149 and an intercept std. error of .025 values which are roughly close to the x std.error for resampling rows (se(x)=.0249, se(intercept)=.01469) and the t stats for resampling residuals (tx=.0360, tintercept=.0146).</p>
+</div>
+<div id="question-2.1-3-pts" class="section level2">
+<h2>Question 2.1 (3 pts)</h2>
+<p>Using the <code>msleep</code> data (in ggplot2), regress <code>sleep_rem</code> on the interaction of <code>brainwt</code> and <code>vore</code>. Interpret the intercept in context. Interpret the coefficient <code>brainwt</code> in context. Interpret the coefficient for <code>voreinsecti</code> in context. Interpret the coefficient for <code>brainwt:voreinsecti</code> in context (Ignore significance, etc.)</p>
+<pre class="r"><code>library(tidyverse)
+
+model3 &lt;- lm(sleep_rem ~ brainwt * vore, data = msleep)
+summary(model3)</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = sleep_rem ~ brainwt * vore, data = msleep)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -1.32515 -0.65057 -0.09685  0.43587  2.80300 
+## 
+## Coefficients:
+##                     Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)          2.68511    0.48162   5.575  2.8e-06 ***
+## brainwt             -3.42607    3.49182  -0.981  0.33324    
+## voreherbi           -1.20881    0.55723  -2.169  0.03693 *  
+## voreinsecti         -0.04121    0.72892  -0.057  0.95524    
+## voreomni            -0.58505    0.54330  -1.077  0.28891    
+## brainwt:voreherbi    1.42876    3.69597   0.387  0.70141    
+## brainwt:voreinsecti 46.01707   13.95225   3.298  0.00224 ** 
+## brainwt:voreomni     2.94134    3.56621   0.825  0.41508    
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 0.9408 on 35 degrees of freedom
+##   (40 observations deleted due to missingness)
+## Multiple R-squared:  0.5087, Adjusted R-squared:  0.4104 
+## F-statistic: 5.176 on 7 and 35 DF,  p-value: 0.0004084</code></pre>
+<p>sleep_rem= 2.4726-.8722(brainwt)-1.1378(voreherbi)+1.0705(voreinsecti)-.3161(voreomni)+1.42876(brainwt:voreherbi)+46.01707(brainwt:voreinsecti)+2.94134(brainwt:voreomni)</p>
+<p>The reference group for 'vore' is 'carni' and the reference group, and the base level for brainwt is 0. This being said, the intercept of 2.4726 is the rem sleep predicted for a carnivore that has a brainwt of 0. Controlling for diet group, the brainwt intercept of -.8722 means that for every 1 unit increase in brainwt, rem_sleep decreases .8722 units. Rem-sleep in the insecti group is 1.0705 units higher than the carni rem_sleep.The coefficient for brainwt:voreinsecti was 46.017, meaning that the slope for brainwt on rem_sleep for insectivores is 46.017 higher than carnivores.</p>
+</div>
+<div id="question-2.2-2-pts" class="section level2">
+<h2>Question 2.2 (2 pts)</h2>
+<p>Rerun the same regression as above, but center the <code>brainwt</code> variable first by subtracting the mean (use na.rm=T). Which coefficients that you interpreted in 2a (above) changed? Why? Reinterpret any coefficient from part 2.1 that changed. (Ignore significance, etc.)</p>
+<pre class="r"><code>msleep$brainwt_c &lt;- msleep$brainwt - mean(msleep$brainwt, 
+    na.rm = T)
+model3 &lt;- lm(sleep_rem ~ brainwt_c * vore, data = msleep)
+summary(model3)</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = sleep_rem ~ brainwt_c * vore, data = msleep)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -1.32515 -0.65057 -0.09685  0.43587  2.80300 
+## 
+## Coefficients:
+##                       Estimate Std. Error t value Pr(&gt;|t|)   
+## (Intercept)             1.7204     0.7920   2.172  0.03670 * 
+## brainwt_c              -3.4261     3.4918  -0.981  0.33324   
+## voreherbi              -0.8065     0.8475  -0.952  0.34780   
+## voreinsecti            12.9163     3.6426   3.546  0.00113 **
+## voreomni                0.2432     0.8301   0.293  0.77129   
+## brainwt_c:voreherbi     1.4288     3.6960   0.387  0.70141   
+## brainwt_c:voreinsecti  46.0171    13.9522   3.298  0.00224 **
+## brainwt_c:voreomni      2.9413     3.5662   0.825  0.41508   
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 0.9408 on 35 degrees of freedom
+##   (40 observations deleted due to missingness)
+## Multiple R-squared:  0.5087, Adjusted R-squared:  0.4104 
+## F-statistic: 5.176 on 7 and 35 DF,  p-value: 0.0004084</code></pre>
+<p>Centering brainwt for average brainwt decreased the intercept to 1.7204, meaning that the estimated rem_sleep for carnivores with an average brain weight is 1.7204 hours. The coefficient of brainwt_c also decreased to -3.4261, meaning that while controlling for diet group (vore), for every 1 unit increase in brain weight, there is a 3.4261 hour decrease in rem_sleep. Voreinsecti coefficient also increased to 12.9163, meaning that rem_sleep for the insecti- group was 12.9163 units higher than carni-rem sleep. The brainwt_c:voreinsecti coeff. remained roughly the same.</p>
+</div>
+<div id="question-2.3-2-pts" class="section level2">
+<h2>Question 2.3 (2 pts)</h2>
+<p>Remove NA from <code>vore</code> only (i.e., use filter rather than na.omit) and make a plot of <code>rem_sleep</code> by <code>brainwt</code> colored/grouped by vore, using <code>geom_smooth(method=&quot;lm&quot;)</code> to visualize this regression. What is the mean value of brainwt? Using the plot, Does it make sense to extrapolate to this value for the <code>voreinsecti</code> coefficient (think about your interpretation of this coefficient in 2.2)?</p>
+<pre class="r"><code>msleep %&gt;% filter(!is.na(vore)) %&gt;% ggplot(aes(x = brainwt, 
+    y = sleep_rem, color = vore)) + geom_smooth(method = &quot;lm&quot;)</code></pre>
+<p><img src="/HW_7_files/figure-html/unnamed-chunk-6-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>msleep %&gt;% filter(!is.na(brainwt)) %&gt;% summarize(mean(brainwt))</code></pre>
+<pre><code>## # A tibble: 1 x 1
+##   `mean(brainwt)`
+##             &lt;dbl&gt;
+## 1           0.282</code></pre>
+<p>It does not make sense to extrapolate the value for voreinsecti, since all the values are below the mean of .2815 units.</p>
+</div>
+<div id="question-2.4-2-pts" class="section level2">
+<h2>Question 2.4 (2 pts)</h2>
+<p>Regression makes no assumptions about the distribution of the predictors, and taking the log will fix the issue observed in 2.3. Take the natural log of brainwt, then center it (don't forget <code>na.rm=T</code>), and then rerun the regression model with this brainwt variable instead (note that you can't just take the log of the centered variable). Use heteroskedasticity robust standard errors <code>coeftest(fit, vcov=vcovHC(fit))</code>. Interpret the one significant effect and, finally, discuss significance and your decision with respect to the null hypothesis</p>
+<pre class="r"><code># centering log brain weight
+msleepy &lt;- msleep %&gt;% mutate(logbrainwt = log(brainwt)) %&gt;% 
+    filter(!is.na(brainwt)) %&gt;% mutate(logbrainwt_c = logbrainwt - 
+    mean(logbrainwt))
+
+# making new regression
+model4 &lt;- lm(sleep_rem ~ logbrainwt_c * vore, data = msleepy)
+summary(model4)</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = sleep_rem ~ logbrainwt_c * vore, data = msleepy)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -1.3355 -0.6414 -0.1108  0.3551  2.7841 
+## 
+## Coefficients:
+##                          Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)               2.64015    0.48074   5.492 3.61e-06 ***
+## logbrainwt_c             -0.26848    0.33800  -0.794  0.43236    
+## voreherbi                -1.40873    0.53246  -2.646  0.01213 *  
+## voreinsecti               2.25937    0.80833   2.795  0.00837 ** 
+## voreomni                 -0.63533    0.52990  -1.199  0.23860    
+## logbrainwt_c:voreherbi    0.03404    0.35198   0.097  0.92350    
+## logbrainwt_c:voreinsecti  0.85380    0.39093   2.184  0.03575 *  
+## logbrainwt_c:voreomni     0.15788    0.34911   0.452  0.65390    
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 0.9155 on 35 degrees of freedom
+##   (13 observations deleted due to missingness)
+## Multiple R-squared:  0.5347, Adjusted R-squared:  0.4416 
+## F-statistic: 5.746 on 7 and 35 DF,  p-value: 0.0001762</code></pre>
+<pre class="r"><code># homoskedasicity robust standard errors
+coeftest(model4, vcov = vcovHC(model4))</code></pre>
+<pre><code>## 
+## t test of coefficients:
+## 
+##                           Estimate Std. Error t value  Pr(&gt;|t|)    
+## (Intercept)               2.640154   0.585951  4.5058 7.068e-05 ***
+## logbrainwt_c             -0.268484   0.450970 -0.5953    0.5554    
+## voreherbi                -1.408729   0.621094 -2.2681    0.0296 *  
+## voreinsecti               2.259368   3.941791  0.5732    0.5702    
+## voreomni                 -0.635335   0.633588 -1.0028    0.3229    
+## logbrainwt_c:voreherbi    0.034044   0.458258  0.0743    0.9412    
+## logbrainwt_c:voreinsecti  0.853802   1.145566  0.7453    0.4611    
+## logbrainwt_c:voreomni     0.157875   0.458268  0.3445    0.7325    
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<pre class="r"><code># ho: controlling for glucose, bmi doesnt explain
+# variation in bp</code></pre>
+<p>While controlling for mean log brain weight, voreherbi had a significant decrease of 1.408 hours in sleep_rem compared to vorecarni (t value=-2.2681, p&lt;.05). We reject the null hypothesis that while controlling for brain weight, voreherbi does not explain variation in sleep_rem.</p>
+</div>
+<div id="question-2.5-2-pts" class="section level2">
+<h2>Question 2.5 (2 pts)</h2>
+<p>Make a new plot just like 2.3 (remove NAs from <code>vore</code> manually), but this time use the log of <code>brainwt</code> on the x-axis and include <code>geom_smooth(method=&quot;lm&quot;)</code> to visualize the regression from 2.4. Where can you see the significant effect on the plot (describe in words)?</p>
+<pre class="r"><code>msleepy %&gt;% filter(!is.na(vore)) %&gt;% ggplot(aes(x = logbrainwt_c, 
+    y = sleep_rem, color = vore)) + geom_smooth(method = &quot;lm&quot;)</code></pre>
+<p><img src="/HW_7_files/figure-html/unnamed-chunk-8-1.png" width="672" style="display: block; margin: auto;" /> This plot compared to the plot in 2.3, has an x axis that extends more in the negative direction (to -5), and each line is more spread out (especially in insectivores, but also seen in herbivore, which no has a significant effect on predicting rem sleep)</p>
+<pre><code>## R version 4.0.0 (2020-04-24)
+## Platform: x86_64-apple-darwin17.0 (64-bit)
+## Running under: macOS High Sierra 10.13.4
+## 
+## Matrix products: default
+## BLAS:   /Library/Frameworks/R.framework/Versions/4.0/Resources/lib/libRblas.dylib
+## LAPACK: /Library/Frameworks/R.framework/Versions/4.0/Resources/lib/libRlapack.dylib
+## 
+## locale:
+## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+## 
+## attached base packages:
+## [1] stats     graphics  grDevices utils     datasets  methods   base     
+## 
+## other attached packages:
+##  [1] sandwich_3.0-0  lmtest_0.9-38   zoo_1.8-8       forcats_0.5.0  
+##  [5] stringr_1.4.0   dplyr_1.0.2     purrr_0.3.4     readr_1.3.1    
+##  [9] tidyr_1.1.2     tibble_3.0.1    ggplot2_3.3.2   tidyverse_1.3.0
+## 
+## loaded via a namespace (and not attached):
+##  [1] tidyselect_1.1.0 xfun_0.19        splines_4.0.0    lattice_0.20-41 
+##  [5] haven_2.2.0      colorspace_1.4-1 vctrs_0.3.4      generics_0.0.2  
+##  [9] htmltools_0.5.0  mgcv_1.8-31      yaml_2.2.1       utf8_1.1.4      
+## [13] blob_1.2.1       rlang_0.4.7      pillar_1.4.3     glue_1.4.0      
+## [17] withr_2.2.0      DBI_1.1.0        dbplyr_1.4.4     modelr_0.1.8    
+## [21] readxl_1.3.1     lifecycle_0.2.0  munsell_0.5.0    blogdown_0.21   
+## [25] gtable_0.3.0     cellranger_1.1.0 rvest_0.3.6      evaluate_0.14   
+## [29] labeling_0.3     knitr_1.28       fansi_0.4.1      broom_0.7.0     
+## [33] Rcpp_1.0.4.6     scales_1.1.1     backports_1.1.9  formatR_1.7     
+## [37] jsonlite_1.6.1   farver_2.0.3     fs_1.5.0         hms_0.5.3       
+## [41] digest_0.6.25    stringi_1.4.6    bookdown_0.21    grid_4.0.0      
+## [45] cli_2.0.2        tools_4.0.0      magrittr_1.5     crayon_1.3.4    
+## [49] pkgconfig_2.0.3  Matrix_1.2-18    ellipsis_0.3.0   xml2_1.3.2      
+## [53] reprex_0.3.0     lubridate_1.7.9  assertthat_0.2.1 rmarkdown_2.5   
+## [57] httr_1.4.2       rstudioapi_0.11  R6_2.4.1         nlme_3.1-147    
+## [61] compiler_4.0.0</code></pre>
+<pre><code>## [1] &quot;2020-11-11 16:42:20 CST&quot;</code></pre>
+<pre><code>##                                                                                           sysname 
+##                                                                                          &quot;Darwin&quot; 
+##                                                                                           release 
+##                                                                                          &quot;17.5.0&quot; 
+##                                                                                           version 
+## &quot;Darwin Kernel Version 17.5.0: Mon Mar  5 22:24:32 PST 2018; root:xnu-4570.51.1~1/RELEASE_X86_64&quot; 
+##                                                                                          nodename 
+##                                                                     &quot;MacBook-Air-2.austin.rr.com&quot; 
+##                                                                                           machine 
+##                                                                                          &quot;x86_64&quot; 
+##                                                                                             login 
+##                                                                                       &quot;emilyreed&quot; 
+##                                                                                              user 
+##                                                                                       &quot;emilyreed&quot; 
+##                                                                                    effective_user 
+##                                                                                       &quot;emilyreed&quot;</code></pre>
+</div>

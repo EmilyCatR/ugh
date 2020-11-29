@@ -1,0 +1,21 @@
+{{ partial "head" . }}
+  <body>
+    <div id="wrap">
+      {{ partial "header" . }}
+      <section id="about">
+        <div class="container">
+        <div class="avatar">
+          <img class="img-circle" src="{{ .Site.BaseURL }}img/{{ .Site.Params.avatar }}" alt="Responsive image">
+        </div>
+        <h3>I'm <strong>{{ .Site.Params.author }}</strong>, a genetics undergrad at the University of Texas at Austin.</h3>
+        <h3>Check out my About Me page to learn about my life!</h3>
+        <h3>Have a look at some of my working <a href="{{ .Site.BaseURL }}projects/"> projects</a>.</h3>
+        <h3>For more, check out my academic <a href="https://demo.nurlan.co/hugo-vitae/"> curriculum vitae </a>.</h3>
+        <h3>To contact me, click <a href="mailto:{{ .Site.Params.Social.Email }}">here</a></h3>
+        {{ partial "social.html" . }} 
+        </div>
+      </section>
+    </div>
+    {{ partial "footer" . }}
+  </body>
+</html>

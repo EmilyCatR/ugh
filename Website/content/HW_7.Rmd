@@ -1,0 +1,210 @@
+---
+title: "HW 7"
+author: "SDS348 Fall 2020"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+---
+
+```{r global_options, include=FALSE}
+#DO NOT EDIT THIS CHUNK OR ANYTHING ABOVE IT!
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, fig.align = "center", warning = F, message = F, tidy=T, tidy.opts=list(width.cutoff=50), R.options=list(max.print=100,dplyr.print_max=100))
+library(tidyverse)
+```
+
+
+## Emily Reed, ecr882
+**This homework is due Sunday Nov 1, 2020 at 11:59pm. Please submit as a pdf file on Canvas.**
+
+*For all questions, include the R commands/functions that you used to find your answer. Answers without supporting code will not receive credit.*
+
+> **Review of how to submit this assignment**
+> All homework assignments will be completed using R Markdown. These `.Rmd` files consist of text/syntax (formatted using Markdown) alongside embedded R code. 
+> When you have completed the assignment (by adding R code inside codeblocks and supporting text outside of the codeblocks), create your document as follows:
+
+> - Click the arrow next to the "Knit" button (above) 
+> - Choose "Knit to HTML" and wait; fix any errors if applicable
+> - Go to Files pane and put checkmark next to the correct HTML file
+> - Click on the blue gear icon ("More") and click Export
+> - Download the file and then upload to Canvas
+
+
+---
+
+## Question 1.1 (3 pts)
+
+- Run the following code to generate some play data (variables x and y). Then, regress y on x with `lm(y~x)` and call summary() on the fitted model. Make a scatterplot (either base R or ggplot) to eyeball whether homoskedasticity is met (i.e., do the points fan out as you go up the x-axis?). Then run the Breuch-Pagan test `bptest()` to formally test this null hypothesis. If you reject the null hypothesis of homoskedasticity, redo the regression using heteroskedasticity robust standard errors. How does this change your t-statistics and p-values?
+
+You will need the `lmtest` package and the `sandwich` package in order to do things like `bptest(fit)` and `coeftest(fit,vcov=vcovHC(fit))`; install them if you haven't.
+
+```{R}
+library(lmtest)
+library(sandwich)
+
+set.seed(348)
+x <- runif(55, 0, 1)
+y <- .1 * rnorm(55, x, x)
+
+model1 <- lm(y~x)
+summary(model1)
+
+model1 %>% ggplot(aes(x,y)) + geom_point() #looks like it fans out
+bptest(model1) #reject the null hypothesis
+
+coeftest(model1, vcov = vcovHC(model1)) #correct Ses robust to violations of homoskedasticity
+
+
+```
+This model does not meet assumption of homoskedasticity (p value<.05, reject null hypothesis that homoskedasicity is met), so robust standard errors were calculated. Before correcting for robust standard errors the x value had a significant effect on y values (t=2.067, p<.05). After calculating robust errors, however, x was no longer significant in predicting y (t=1.71, p>.05)
+
+## Question 1.2 (3 pts)
+
+- Run the following code to generate more play data (new variables x and y). Then, regress y on x with `lm(y~x) and call summary. Make a scatterplot (either base R or ggplot) to eyeball whether homoskedasticity is met. Then, use the Breuch-Pagan test `bptest()` to formally test this null hypothesis. Regardless of the result, redo the regression using heteroskedasticity robust standard errors. How does this change your t-statistics and p-values? How does this change differ from before (both in direction and magnitude)?
+
+```{R}
+set.seed(348)
+x <- runif(55, 0, 1)
+y <- .1 * rnorm(55, x, .6)
+
+model2 <- lm(y~x)
+summary(model2)
+
+model2 %>% ggplot(aes(x,y)) + geom_point()#looks pretty gucci
+bptest(model2) #not significant, can't reject null hypothesis, homoskedastic
+
+coeftest(model2, vcov = vcovHC(model2))
+```
+Homoskedastic assumption was met in this model (p value>.05, failed to reject that homoskedasicity was normal), as seen in the scatterplot as bptest. In both regressions, x is a significant predictor of y (p<.05, reject the null hypothesis). However, it is noted that the t statistic for the regression using non-robust errors is slightly lower than the t stat for the robust errors regression (t1=2.365 compared to t2=2.452), resulting in a larger p value. For every 1 unit increase in X for non-robust errors linear regression, y is predicted to increase .062463 units, .0000002 more than the regression using robust errors.
+
+## Question 1.3 (3 pts)
+
+Using `x` and `y` from 1.2, calculate the bootstrap standard error of the slope by resampling observations (i.e., rows) from your dataframe with replacement. Also, calculate the boostrap standard error of the slope by resampling residuals (from the model fit in 1.2, with replacement), adding them to the fitted values to get the new "data", re-computing the regression coefficient, saving, and repeating. For each, use 5000 iterations. How do your results compare with the standard errors from question 1.2? Would you still reject the null hypothesis using these standard errors?
+
+```{R}
+set.seed(348)
+df <- data.frame(x,y)
+
+#resampling rows:
+boot_dat<- sample_frac(df, replace=T)
+
+
+samp_distn<-replicate(5000, {
+  boot_dat <- sample_frac(df, replace=T) 
+  fit <- lm(y~x, data=boot_dat) 
+  coef(fit) 
+}) 
+ 
+
+#resampling residuals
+  fit<-lm(y~x,data=df) 
+  resids<-fit$residuals 
+  fitted<-fit$fitted.values 
+   
+  resid_resamp<-replicate(5000,{
+    new_resids<-sample(resids,replace=TRUE) 
+    df$new_y<-fitted+new_resids 
+    fit<-lm(new_y~x,data=df) 
+    coef(fit) 
+}) 
+
+summary(model2)#from Q1.2
+coeftest(model2, vcov = vcovHC(model2))#from Q1.2
+samp_distn %>% t %>% as.data.frame %>% summarize_all(sd) 
+resid_resamp%>%t%>%as.data.frame%>%summarize_all(sd)
+
+
+```
+
+Comparing the st errors from all three tests, the first model  (using robut errors) prodcues a std. error for x of .0149 and an intercept std. error of .025 values which are roughly close to the x std.error for resampling rows (se(x)=.0249, se(intercept)=.01469) and the t stats for resampling residuals (tx=.0360, tintercept=.0146).
+
+
+
+## Question 2.1 (3 pts)
+
+Using the `msleep` data (in ggplot2), regress `sleep_rem` on the interaction of `brainwt` and `vore`. Interpret the intercept in context. Interpret the coefficient `brainwt` in context. Interpret the coefficient for `voreinsecti` in context. Interpret the coefficient for `brainwt:voreinsecti` in context (Ignore significance, etc.)
+
+```{R}
+library(tidyverse)
+
+model3 <- lm(sleep_rem~brainwt*vore, data=msleep)
+summary(model3)
+
+
+```
+sleep_rem= 2.4726-.8722(brainwt)-1.1378(voreherbi)+1.0705(voreinsecti)-.3161(voreomni)+1.42876(brainwt:voreherbi)+46.01707(brainwt:voreinsecti)+2.94134(brainwt:voreomni)
+
+The reference group for 'vore' is 'carni' and the reference group, and the base level for brainwt is 0. This being said, the intercept of 2.4726 is the rem sleep predicted for a carnivore that has a brainwt of 0. Controlling for diet group, the brainwt intercept of -.8722 means that for every 1 unit increase in brainwt, rem_sleep decreases .8722 units. Rem-sleep in the insecti group is 1.0705 units higher than the carni rem_sleep.The coefficient for brainwt:voreinsecti was 46.017, meaning that the slope for brainwt on rem_sleep for insectivores is 46.017 higher than carnivores.
+
+## Question 2.2 (2 pts)
+
+Rerun the same regression as above, but center the `brainwt` variable first by subtracting the mean (use na.rm=T). Which coefficients that you interpreted in 2a (above) changed? Why? Reinterpret any coefficient from part 2.1 that changed. (Ignore significance, etc.)  
+
+```{R}
+
+msleep$brainwt_c <- msleep$brainwt - mean(msleep$brainwt, na.rm=T)
+model3 <- lm(sleep_rem~brainwt_c*vore, data=msleep)
+summary(model3)
+
+```
+Centering brainwt for average brainwt decreased the intercept to 1.7204, meaning that the estimated rem_sleep for carnivores with an average brain weight is 1.7204  hours. The coefficient of brainwt_c also decreased to -3.4261, meaning that while controlling for diet group (vore), for every 1 unit increase in brain weight, there is a 3.4261 hour decrease in rem_sleep. Voreinsecti coefficient also increased to 12.9163, meaning that rem_sleep for the insecti- group was 12.9163 units higher than carni-rem sleep. The brainwt_c:voreinsecti coeff. remained roughly the same.
+
+## Question 2.3 (2 pts)
+
+Remove NA from `vore` only (i.e., use filter rather than na.omit) and make a plot of `rem_sleep` by `brainwt` colored/grouped by vore, using `geom_smooth(method="lm")` to visualize this regression. What is the mean value of brainwt? Using the plot, Does it make sense to extrapolate to this value for the `voreinsecti` coefficient (think about your interpretation of this coefficient in 2.2)?
+
+```{R}
+msleep %>% 
+  filter(!is.na(vore)) %>% 
+  ggplot(aes(x=brainwt, y=sleep_rem, color=vore))+
+  geom_smooth(method="lm")
+
+msleep %>% filter(!is.na(brainwt)) %>% summarize(mean(brainwt))
+```
+
+It does not make sense to extrapolate the value for voreinsecti, since all the values are below the mean of .2815 units.
+
+## Question 2.4 (2 pts)
+
+Regression makes no assumptions about the distribution of the predictors, and taking the log will fix the issue observed in 2.3. Take the natural log of brainwt, then center it (don't forget `na.rm=T`), and then rerun the regression model with this brainwt variable instead (note that you can't just take the log of the centered variable). Use heteroskedasticity robust standard errors `coeftest(fit, vcov=vcovHC(fit))`. Interpret the one significant effect and, finally, discuss significance and your decision with respect to the null hypothesis
+
+```{R}
+#centering log brain weight
+msleep %>% 
+  mutate(logbrainwt=log(brainwt)) %>%
+  filter(!is.na(brainwt)) %>% 
+  mutate(logbrainwt_c=logbrainwt - mean(logbrainwt))-> msleepy
+
+#making new regression
+model4 <- lm(sleep_rem~logbrainwt_c*vore, data=msleepy)
+summary(model4)
+
+#homoskedasicity robust standard errors      
+coeftest(model4, vcov=vcovHC(model4))
+
+#ho: controlling for glucose, bmi doesnt explain variation in bp
+```
+
+While controlling for mean log brain weight, voreherbi had a significant decrease of 1.408 hours in sleep_rem compared to vorecarni (t value=-2.2681, p<.05). We reject the null hypothesis that while controlling for brain weight, voreherbi does not explain variation in sleep_rem.
+
+## Question 2.5 (2 pts)
+
+Make a new plot just like 2.3 (remove NAs from `vore` manually), but this time use the log of `brainwt` on the x-axis and include `geom_smooth(method="lm")` to visualize the regression from 2.4. Where can you see the significant effect on the plot (describe in words)?
+
+```{r}
+msleepy %>% 
+  filter(!is.na(vore)) %>% 
+  ggplot(aes(x=logbrainwt_c, y=sleep_rem, color=vore))+
+  geom_smooth(method="lm")
+```
+This plot compared to the plot in 2.3, has an x axis that extends more in the negative direction (to -5), and each line is more spread out (especially in insectivores, but also seen in herbivore, which no has a significant effect on predicting rem sleep)
+
+
+```{R, echo=F}
+## DO NOT DELETE THIS BLOCK!
+sessionInfo()
+Sys.time()
+Sys.info()
+```

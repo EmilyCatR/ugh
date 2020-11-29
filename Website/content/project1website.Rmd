@@ -1,0 +1,214 @@
+---
+title: "Project"
+author: "Emily"
+date: "9/30/2020"
+output: html_document
+---
+This data is about flu cases/hospitalizations/deaths per state and percent of people who recieved the flu vaccination 18+ years in 2009-2010 Swine Flu Epidemic.
+
+```{r echo=FALSE, results='hide'}
+library(tidyverse)
+library(ggplot2)
+getwd()
+setwd("/Users/emilyreed/Desktop")
+flu_cases <- read.csv("Flu_cases.csv") 
+vaccinations <- read.csv("Vaccinations.csv")
+```
+
+Flu cases has 56 observations (1 per state, plus a few territories). "cases", "hospitalizations", and "deaths" refers to the number of cases, hospital visits, and death due to influenza reported in that state for the 2009-2010 flu season. This data is NOT separated by age.
+
+```{r}
+#flu cases table
+#turning cases and hospitalizations into numeric values for later calculations
+flu_cases1 <- flu_cases %>% mutate_at("Hospitalizations", as.numeric) 
+glimpse(flu_cases1)
+head(flu_cases1)
+
+```
+
+Vaccinations is a dataset with 51 observations (one per state, plus District of Colubmbia). "Perc_vaccinated" refers to the percentage of each age group vaccinated in each state in the 2009-2010 flu season. 
+
+```{r}
+#flu vaccinations table
+glimpse(vaccinations)
+head(vaccinations)
+```
+Vaccinations dataset needs to be 'tidy'ed!
+
+
+```{r}
+vaccinations2 <- vaccinations %>% 
+  pivot_longer(2:4, names_to="age_group",values_to="percentage_vaccinated") %>% 
+  separate("age_group", into=c("percent", "age_group"), sep="\\.", convert=T ) %>%
+  select(-percent) %>% rename("State"="Names")
+
+vaccinations2
+```
+
+
+```{r}
+#Lets join the data!
+cases_vaccinations <- left_join(flu_cases1, vaccinations2, by="State", convert=T)
+glimpse(cases_vaccinations)
+head(cases_vaccinations)
+```
+-----
+Using summary statistics:
+
+
+#Finding the average % vaccinated for each state across all age groups
+
+```{r}
+#Find mean % of vaccinations across all age groups for each state
+cases_vaccinations <- cases_vaccinations %>% group_by(State) %>% mutate(average_vaccinations= mean(percentage_vaccinated))
+cases_vaccinations
+
+#find states with average vaccinations % that are above the National average vaccination %
+national_average_vaccinated <- cases_vaccinations %>% filter(!is.na(average_vaccinations)) %>%  summarize(national_avg=mean(average_vaccinations)) %>% summarize(mean(national_avg)) 
+national_average_vaccinated
+
+
+cases_vaccinations%>% filter(average_vaccinations>national_average_vaccinated) %>% select(State, average_vaccinations) %>% summarize(avg_vaccination_percent = mean(average_vaccinations)) %>% arrange(desc(avg_vaccination_percent))
+
+
+```
+##Lets see which states had the most cases of flu. Which states had the fewest percent average vaccinated citizens?
+
+```{r}
+#Which states had the most cases of flu
+cases_vaccinations %>% 
+  group_by(State) %>% 
+  summarize(case=mean(cases)) %>% 
+  arrange(desc(case))
+
+
+#Which states had the lowest average % vaccinated across all age groups
+cases_vaccinations %>% 
+  group_by(State) %>%
+  summarize(avg_vaccination_percent = mean(average_vaccinations)) %>% 
+  arrange(avg_vaccination_percent)
+
+
+#Do the states that had the most flu match with the states that had the lowest average % vaccinated? (Nope)
+cases_vaccinations %>% 
+  group_by(State) %>% 
+  summarize(case_in_state=mean(cases), avg_vaccination_state=(mean(average_vaccinations))) %>% 
+  arrange(desc(case_in_state), avg_vaccination_state) %>% 
+  select(State, case_in_state, avg_vaccination_state)
+
+```
+
+
+##Make new variables using mutate for mean and sd for each % vaccinated in each age group average cases, hospitalizations and deaths
+
+Finding the national average of cases
+```{r}
+national_average_cases <- cases_vaccinations %>% summarize(average_cases_US= mean(cases)) %>% summarize(average_cases_US=mean(average_cases_US))
+national_average_cases
+```
+
+
+Finding the national sd of cases between states
+```{r}
+national_sd_cases <- cases_vaccinations %>% summarize(sd_cases_US= mean(cases)) %>% summarize(sd_cases=sd(sd_cases_US))
+national_sd_cases
+```
+
+
+Finding the national average of hospitalizations
+```{r}
+national_average_hospitalizations <- cases_vaccinations %>% 
+  filter(!is.na(Hospitalizations)) %>% 
+  summarize(average_hosp_US= mean(Hospitalizations)) %>%
+  summarize(average_hosp_US=mean(average_hosp_US))
+national_average_hospitalizations
+```
+
+
+Finding the national sd of hospitalizations between states
+```{r}
+national_sd_hospitalizations<- cases_vaccinations %>% 
+  filter(!is.na(Hospitalizations)) %>% 
+  summarize(sd_hosp_US= mean(cases)) %>% 
+  summarize(sd_hosp_US=sd(sd_hosp_US))
+national_sd_hospitalizations
+```
+
+
+Finding the national average of deaths (this data is obviously not very accurate, oop)
+```{r}
+national_average_deaths <- cases_vaccinations %>% 
+  filter(!is.na(Deaths)) %>% 
+  summarize(average_deaths_US= mean(Deaths)) %>%
+  summarize(average_deaths_US=mean(average_deaths_US))
+national_average_deaths
+```
+
+
+Finding the national sd of deaths between states
+```{r}
+national_sd_deaths<- cases_vaccinations %>% 
+  filter(!is.na(Deaths)) %>% 
+  summarize(sd_deaths_US= mean(cases)) %>% 
+  summarize(sd_deaths_US=sd(sd_deaths_US))
+national_sd_deaths
+```
+
+
+
+#Find quantile, min, max for all numeric variables (make into table format using ktables)
+```{r}
+
+
+```
+
+
+#make a correlation heat map of numeric variables
+```{r}
+
+```
+
+
+
+#Average vaccination % (for all age groups) and cases per state graph (scatterplot)
+
+```{r}
+
+cases_vaccinations %>% 
+  group_by(State) %>% 
+  filter(!is.na(average_vaccinations)) %>% 
+  mutate(avg_vaccination_percent = mean(average_vaccinations)) %>% 
+  select(State, avg_vaccination_percent, cases, age_group) %>% 
+  filter(cases > national_average_cases) %>% 
+  ggplot()+
+  geom_point(aes(avg_vaccination_percent, cases, col=State))+
+  ggtitle("Average % Vaccinations and Cases for State Cases Above National Average")+
+  xlab("Average Vaccination Percent")+
+  ylab("Number of Cases")
+
+```
+
+
+
+
+States vaccination percentage for each age group, facet by state, summary stat????
+
+#want to color facet title whether they were over national average number of cases or by quantile, or under and fix order of x variables
+
+```{r , fig.height=10, fig.width=13}
+
+cases_vaccinations %>% 
+  group_by(State) %>% 
+  filter(!is.na(percentage_vaccinated)) %>% 
+  ggplot(aes(x=age_group ,y=percentage_vaccinated, fill=age_group))+
+  geom_bar(stat="identity") +
+  facet_wrap(~State) +
+  geom_hline(yintercept = 51.62267, linetype="longdash")+
+  theme(axis.title.x=element_blank(), axis.text.x=element_blank())+
+  ylab("Percent Vaccinated") 
+  
+#filter(case_vaccinations$case>national_average_cases) %>% 
+  #theme(element_rect(fill="red"))+
+
+```
+

@@ -1,0 +1,215 @@
+---
+title: Set up
+author: Emily
+date: '2020-11-10'
+slug: set-up
+categories: []
+tags: []
+description: ''
+---
+
+What a world we live in
+```{r}
+
+library(reticulate)
+getwd()
+setwd("/Users/emilyreed/Desktop")
+```
+
+
+```{python}
+import turtle
+import time
+import random
+
+# Constant indices
+X = 0
+Y = 1
+
+top_left_circle_center = (-200, 200)
+radius = 20
+
+class Light:
+  def __init__(self, circle_center, radius):
+    self.circle_center = circle_center
+    self.radius = radius
+    self.turtle = self.getInvisibleTurtle()
+    self.fill_color = "black"
+
+  def getInvisibleTurtle(self):
+    t = turtle.Turtle()
+    t.speed(0)  # No animation
+    t.hideturtle()
+    t.color("black")
+    return t
+
+  def turn_on(self, fill_color):
+    self.turtle.color("black", fill_color)
+    self.turtle.penup()
+    self.turtle.setposition(self.circle_center[X], self.circle_center[Y])
+    self.turtle.pendown()
+    self.turtle.begin_fill()
+    self.turtle.circle(radius)
+    self.turtle.end_fill()
+
+def makeLightArray(num_rows, num_cols):
+  # Let x0 = top_left_circle_center[X] and y0 = top_left_circle_center[Y].
+  # Then lop left light, lights[0][0], has its circle center at (x0, y0).
+  # The light to the right of that, lights[0][1], is centered at (x0 + 2 * radius, y0).
+  # The light to the right of that, lights[0][2], is centered at (x0 + 4 * radius, y0).
+  # Etc., until the next row.
+  # The first light in the second row (below the first row), lights[1][0],
+  # should be centered at (x0, y0 - 2 * radius).
+  # lights[1][1] should have its center at (x0 + 2 * radius, y0 - 2 * radius), etc.
+  # So lights[i][j] should be centered at (x0 + i * 2 * radius, y0 - j * 2 * radius).
+  diameter = 2 * radius
+  x0 = top_left_circle_center[X]
+  y0 = top_left_circle_center[Y]
+  lights = [[Light((x0 + i * 2 * radius, y0 - j * 2 * radius), radius) for i in range(num_rows)] for j in range(num_cols)]
+
+  for i in range(num_rows):
+    for j in range(num_cols):
+      lights[i][j].turn_on("black")
+
+  return lights
+
+
+
+
+
+
+
+#Emily Reed ecr882
+
+
+import random
+
+'''
+Use these global variables (do not change them):
+'''
+num_rows = 6
+num_cols = 6
+lights = light.makeLightArray(num_rows, num_cols)
+
+
+'''
+Use these functions (do not change them):
+'''
+def on(light, fill_color):
+  light.turn_on(fill_color)
+
+def off(light):
+  on(light, "black")
+
+def blink(light, color):
+  on(light,color)
+  off(light)
+
+
+'''
+Your functions go here:
+'''
+def happy_face(fill_color):
+  light_list= [lights[1][1], lights[1][4], lights[3][0], lights[4][1], lights[5][2], lights[5][3], lights[4][4], lights[3][5]]
+  for x in light_list:
+    on(x, fill_color)
+  
+def all_on(fill_color):
+  for i in range(num_rows):
+    for j in range(num_cols):
+      on(lights[i][j], fill_color)
+
+def every_other_row(fill_color1, fill_color2 = "black"):
+  for k in range(0, num_rows, 2):
+    for l in range(num_cols):
+      on(lights[k][l], fill_color1)
+  for m in range(1, num_rows, 2):
+    for n in range(num_cols):
+      on(lights[m][n], fill_color2)
+
+def every_other_col(fill_color1, fill_color2 = "black"):
+  for k in range(0, num_cols, 2):
+    for l in range(0, num_rows):
+      on(lights[l][k], fill_color1)
+  for m in range(1, num_cols, 2):
+    for n in range(0, num_rows):
+      on(lights[n][m], fill_color2)
+
+def perimeter(fill_color):
+  for i in range(num_rows):
+    if i == 0 or i == num_rows - 1:
+      for j in range(num_cols):
+        on(lights[i][j], fill_color)
+  for k in range(num_cols):
+    if k == 0 or k == num_cols - 1:
+      for l in range(num_rows):
+        on(lights[l][k], fill_color)
+
+def diagonal(fill_color):
+  for i in range(num_cols):
+    for j in range(num_rows):
+      if i == j:
+        on(lights[i][j], fill_color)
+
+def reverse_diagonal(fill_color):
+  for i in range(num_cols):
+    for j in range(num_rows):
+      if i == (num_rows - 1 - j):
+        on(lights[i][j], fill_color)
+
+def X(fill_color):
+  diagonal(fill_color)
+  reverse_diagonal(fill_color)
+
+def rainbow_cols():
+  counter = 0
+  colors = ["red", "orange", "yellow", "green", "blue", "purple"]
+  for k in range(num_cols):
+    for l in range(num_rows):
+        on(lights[l][k], colors[counter])
+    counter += 1
+
+
+  
+
+'''
+main
+'''
+def main():
+  
+  '''
+  Examples:
+  '''
+  #light up a single light
+  #on(lights[0][2], "yellow")
+
+  #blink a single light
+  #blink(lights[2][1], "red")
+
+  '''
+  Call your functions here:
+  '''
+  on(lights[3][4], "orange")
+  off(lights[3][4])
+  happy_face("yellow")
+  all_on("black")
+  all_on("blue")
+  every_other_row("yellow", "blue")
+  every_other_row("yellow")
+  every_other_col("green", "purple")
+  all_on("black")
+  perimeter("orange")
+  all_on("black")
+  diagonal("red")
+  all_on("black")
+  reverse_diagonal("red")
+  X("blue")
+  rainbow_cols()
+  all_on("black")
+  
+
+main()
+  
+
+
+```
